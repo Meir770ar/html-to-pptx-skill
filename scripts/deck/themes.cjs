@@ -60,7 +60,9 @@ function makeTone({ bg, ink, shape, shapeInk, accentText, accent2 }) {
 function resolveTheme(name, overrides = {}) {
   const base = THEMES[name];
   if (!base) throw new Error(`Unknown theme "${name}". Available: ${Object.keys(THEMES).join(', ')}`);
-  const t = { ...base, ...Object.fromEntries(Object.entries(overrides.palette || {}).filter(([, v]) => v)) };
+  const brand = Object.fromEntries(Object.entries(overrides.palette || {}).filter(([, v]) => v));
+  // A brand accent replaces the theme's own text accent too, otherwise headings keep the old hue.
+  const t = { ...base, ...(brand.accent && !brand.accentText ? { accentText: undefined } : {}), ...brand };
   for (const key of ['bg', 'ink', 'accent', 'accent2']) t[key] = hex(t[key]);
   const darkTheme = t.mode === 'dark';
   const darkInk = mix(darkTheme ? t.bg : t.ink, '000000', 0.3);
@@ -117,4 +119,4 @@ function paletteIssues(theme) {
   return issues;
 }
 
-module.exports = { THEMES, FONTS, resolveTheme, themeCss, fontFaceCss, paletteIssues, fontStack };
+module.exports = { THEMES, FONTS, resolveTheme, themeCss, paletteIssues };

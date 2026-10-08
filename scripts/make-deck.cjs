@@ -3,16 +3,17 @@
 // One command: spec -> HTML deck -> design lint -> PowerPoint files (+ optional real PowerPoint render).
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const execFile = require('node:util').promisify(require('node:child_process').execFile);
 const { build } = require('./build-deck.cjs');
 const { lintDeck, format } = require('./lint-deck.cjs');
 const { contactSheet } = require('./deck/sheet.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 
-function exportPptx(index, output, mode, rtl) {
+// Async so the editable and the image export (each with its own browser and output files) run side by side.
+async function exportPptx(index, output, mode, rtl) {
   const args = [path.join(__dirname, 'html-to-pptx.js'), index, output, `--mode=${mode}`, '--overwrite', ...(rtl ? ['--rtl'] : [])];
-  const stdout = execFileSync(process.execPath, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const { stdout } = await execFile(process.execPath, args, { maxBuffer: 64 * 1024 * 1024 });
   return JSON.parse(stdout);
 }
 
@@ -27,22 +28,17 @@ function rasterSummary(reportPath) {
   return { slidesWithRaster: slides, reasons, fonts: [...new Set(report.slides.flatMap(s => s.fonts))] };
 }
 
+// verify-powerpoint.ps1 already retries each slide export; a failure here is real and is reported with PowerPoint's own message.
 async function powerpointProof(pptx, outDir) {
   if (process.platform !== 'win32') return { skipped: 'PowerPoint rendering is available on Windows only' };
-  let failure = '';
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    fs.rmSync(outDir, { recursive: true, force: true });
-    try {
-      execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'verify-powerpoint.ps1'), '-Pptx', pptx, '-OutputDir', outDir], { encoding: 'utf8', timeout: 240000, stdio: 'pipe' });
-      failure = '';
-      break;
-    } catch (error) {
-      // PowerPoint's first automated launch is sometimes still busy; a short wait and retry fixes it.
-      failure = `PowerPoint verification failed: ${String(error.message).split('\n')[0]}`;
-      await new Promise(resolve => setTimeout(resolve, 4000));
-    }
+  fs.rmSync(outDir, { recursive: true, force: true });
+  try {
+    await execFile('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'verify-powerpoint.ps1'), '-Pptx', pptx, '-OutputDir', outDir], { timeout: 240000 });
+  } catch (error) {
+    process.exitCode = 1;
+    const detail = String(error.stderr || error.message).split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(0, 2).join(' ');
+    return { skipped: `PowerPoint verification failed: ${detail}. If the fonts are not installed, run scripts/install-fonts.cjs and retry.` };
   }
-  if (failure) return { skipped: failure };
   const images = fs.readdirSync(outDir).filter(f => /^slide-\d+\.png$/.test(f)).sort().map(f => path.join(outDir, f));
   return { dir: outDir, slides: images.length, contactSheet: images.length ? await contactSheet(images, path.join(outDir, 'contact-sheet.png')) : null };
 }
@@ -51,7 +47,7 @@ async function main() {
   const args = process.argv.slice(2), flags = new Set(args.filter(a => a.startsWith('--'))), pos = args.filter(a => !a.startsWith('--'));
   if (pos.length !== 2) throw new Error('Usage: node scripts/make-deck.cjs spec.json OUTPUT-DIR [--overwrite] [--force] [--no-export] [--powerpoint]');
   const built = build(pos[0], pos[1], { overwrite: flags.has('--overwrite') });
-  const spec = JSON.parse(fs.readFileSync(pos[0], 'utf8')), rtl = !['en', 'fr', 'de', 'es', 'ru'].includes(spec.lang || 'he');
+  const rtl = built.dir === 'rtl';
   console.log(`Built ${built.slides} slides (theme: ${built.theme}) -> ${built.index}`);
 
   const lint = await lintDeck(built.index);
@@ -63,7 +59,7 @@ async function main() {
     const exportDir = path.join(built.out, 'export');
     fs.mkdirSync(exportDir, { recursive: true });
     const editable = path.join(exportDir, 'deck.pptx'), faithful = path.join(exportDir, 'deck-faithful.pptx');
-    const e = exportPptx(built.index, editable, 'editable', rtl), f = exportPptx(built.index, faithful, 'image', rtl);
+    const [e] = await Promise.all([exportPptx(built.index, editable, 'editable', rtl), exportPptx(built.index, faithful, 'image', rtl)]);
     result.editable = { file: editable, ...rasterSummary(e.report) };
     result.faithful = { file: faithful };
     const fontDir = path.join(exportDir, 'fonts-to-install');

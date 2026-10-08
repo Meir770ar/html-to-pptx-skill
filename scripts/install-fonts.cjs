@@ -6,10 +6,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { FONTS } = require('./deck/themes.cjs');
 
 const SOURCE = path.resolve(__dirname, '../assets/fonts/ttf');
 const REGISTRY = 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
-const familyOf = file => file.replace(/-(Variable|Regular)\.ttf$/i, '').replace(/([a-z])([A-Z])/g, '$1 $2');
 
 function target() {
   if (process.platform === 'win32') return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData/Local'), 'Microsoft/Windows/Fonts');
@@ -27,8 +27,8 @@ $r=[UIntPtr]::Zero; [void][W.F]::SendMessageTimeout([IntPtr]0xffff,0x1D,[UIntPtr
 
 function main() {
   const args = process.argv.slice(2), uninstall = args.includes('--uninstall'), dry = args.includes('--dry-run');
-  const files = fs.readdirSync(SOURCE).filter(f => f.toLowerCase().endsWith('.ttf')), dest = target();
-  const plan = files.map(f => ({ from: path.join(SOURCE, f), to: path.join(dest, f), name: `${familyOf(f)}${/Variable/.test(f) ? ' Variable' : ''} (TrueType)` }));
+  const dest = target();
+  const plan = Object.entries(FONTS).map(([family, { ttf }]) => ({ from: path.join(SOURCE, ttf), to: path.join(dest, ttf), name: `${family}${/Variable/.test(ttf) ? ' Variable' : ''} (TrueType)` }));
   console.log(`${uninstall ? 'Removing' : 'Installing'} ${plan.length} font file(s) ${uninstall ? 'from' : 'into'} ${dest}`);
   for (const item of plan) console.log(`  ${path.basename(item.to)}`);
   if (dry) { console.log('Dry run: nothing changed.'); return; }

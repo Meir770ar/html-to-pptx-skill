@@ -117,7 +117,7 @@ async function captureElement(page, el, omitBackground = false) {
 async function screenshotNode(page, id) {
   const el = await page.$(`[data-pptx-node="${id}"]`); if (!el) throw new Error(`Measured DOM element disappeared: ${id}`);
   try { return await captureElement(page, el, true); }
-  catch (error) { const what = await el.evaluate(e => `${e.tagName.toLowerCase()}${e.getAttribute('class') ? `.${e.getAttribute('class').trim().replace(/s+/g, '.')}` : ''}`); throw new Error(`${error.message} (while rasterizing <${what}>)`); }
+  catch (error) { const what = await el.evaluate(e => `${e.tagName.toLowerCase()}${e.getAttribute('class') ? `.${e.getAttribute('class').trim().replace(/\s+/g, '.')}` : ''}`); throw new Error(`${error.message} (while rasterizing <${what}>)`); }
 }
 
 function addTable(slide, table, unit) {

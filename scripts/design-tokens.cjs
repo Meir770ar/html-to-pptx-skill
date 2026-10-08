@@ -7,4 +7,4 @@ function contrast(a, b) {
   const values = [luminance(a), luminance(b)].sort((a, b) => b - a);
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
-module.exports = { contrast };
+module.exports = { contrast, luminance };

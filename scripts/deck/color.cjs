@@ -1,7 +1,7 @@
 'use strict';
 // Colour maths for the deck system. Every text/background pair that the themes emit is
 // pushed through ensureContrast(), so a brand colour can never make a slide unreadable.
-const { contrast } = require('../design-tokens.cjs');
+const { contrast, luminance: relativeLuminance } = require('../design-tokens.cjs');
 
 const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const hex = value => {
@@ -25,10 +25,7 @@ function fromHsl([h, s, l]) {
   const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
   return fromRgb([(r + m) * 255, (g + m) * 255, (b + m) * 255]);
 }
-const luminance = value => {
-  const v = toRgb(value).map(c => c / 255).map(c => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  return v[0] * 0.2126 + v[1] * 0.7152 + v[2] * 0.0722;
-};
+const luminance = value => relativeLuminance(hex(value));
 const ratio = (a, b) => contrast(hex(a), hex(b));
 
 // Keep the hue, move lightness away from the background until the pair reaches `min`.
@@ -44,4 +41,4 @@ function ensureContrast(fg, bg, min = 4.5) {
 // Best readable text colour on a filled shape.
 const bestInk = (fill, dark = '111111', light = 'FFFFFF') => ratio(light, fill) >= ratio(dark, fill) ? hex(light) : hex(dark);
 
-module.exports = { hex, mix, ratio, luminance, ensureContrast, bestInk, toHsl, fromHsl, clamp };
+module.exports = { hex, mix, ratio, ensureContrast, bestInk };

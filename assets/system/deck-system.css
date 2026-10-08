@@ -185,6 +185,7 @@ bdi{unicode-bidi:isolate}
 .L-closing .cl-art{position:absolute;inset-block:0;inset-inline-end:0;width:680px;overflow:hidden}
 .L-closing .display{margin-bottom:30px}
 .cta{display:inline-flex;align-items:center;gap:22px;align-self:flex-start;background:var(--accent);color:var(--accent-ink);padding:26px 50px;border-radius:calc(var(--radius)*2);font-size:42px;font-weight:700;margin-top:44px}
+[dir=ltr] .cta .icon{transform:scaleX(-1)}
 .contacts{display:flex;gap:70px;margin-top:70px;flex-wrap:wrap}
 .contact .k{font-size:28px;color:var(--muted);margin-bottom:6px}
 .contact .v{font-size:38px;font-weight:700}

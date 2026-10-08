@@ -38,7 +38,6 @@ const ICONS = {
   warning: '<path d="M12 3.500L22 20.500H2L12 3.500z"/><path d="M12 10v4.500M12 17.500v.5"/>',
   sparkle: '<path d="M12 3l1.800 5.200L19 10l-5.200 1.800L12 17l-1.800-5.200L5 10l5.200-1.800L12 3z"/><path d="M19 16l.8 2.200L22 19l-2.200.8L19 22l-.8-2.200L16 19l2.200-.8L19 16z"/>',
 };
-ICONS.arrow = '<path d="M20 12H4M10 6l-6 6 6 6"/>'; // points to the inline end in RTL
 
 function icon(name, size = 44) {
   const body = ICONS[name];

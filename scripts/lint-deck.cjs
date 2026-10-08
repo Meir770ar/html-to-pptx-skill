@@ -76,7 +76,7 @@ function inspectSlide(index, limits, layout) {
   }
 
   // 4. type size and contrast, per text run
-  let words = 0;
+  let words = 0, unchecked = false;
   for (const item of list) {
     if (!item.isChrome) words += textOf(item).trim().split(/\s+/).length;
     for (const node of item.nodes) {
@@ -87,7 +87,7 @@ function inspectSlide(index, limits, layout) {
       if (!fg || layout === 'image') continue;
       const layers = []; let unknown = false;
       for (let p = el; p; p = p.parentElement) { const ps = style(p); if (ps.backgroundImage !== 'none') { unknown = true; break; } const bg = parse(ps.backgroundColor); if (bg && bg.a > 0) { layers.push(bg); if (bg.a >= .99) break; } }
-      if (unknown) continue;
+      if (unknown) { if (!unchecked) add('warn', 'contrast-unchecked', 'text sits on an image or gradient, so its contrast was not verified; check it by eye', node.textContent); unchecked = true; continue; }
       let base = layers.length ? layers[layers.length - 1] : { r: 255, g: 255, b: 255, a: 1 };
       for (let k = layers.length - 2; k >= 0; k--) base = { r: layers[k].r * layers[k].a + base.r * (1 - layers[k].a), g: layers[k].g * layers[k].a + base.g * (1 - layers[k].a), b: layers[k].b * layers[k].a + base.b * (1 - layers[k].a), a: 1 };
       const large = size >= 56 || (size >= 40 && Number(s.fontWeight) >= 700), need = large ? 3 : 4.5, got = ratio(fg, base);
@@ -101,7 +101,7 @@ function inspectSlide(index, limits, layout) {
   else if (words > limits.warnWords && layout !== 'table') add('warn', 'density', `${words} words on one slide. Presenters lose the room above ~${limits.warnWords}.`, '');
   const titleEl = slide.querySelector('.title,.display,.stmt');
   if (titleEl && titleEl.textContent.trim().length > limits.maxTitleChars) add('warn', 'title-length', `title is ${titleEl.textContent.trim().length} characters; a title should state one claim in a line or two`, titleEl.textContent);
-  if (!SPARSE_OK_CHECK(layout)) {
+  if (!limits.sparseOk.includes(layout)) {
     const body = list.filter(i => !i.isChrome), shapes = [...slide.querySelectorAll('.card,.panel,.bar-track,.col,.stat,.step,.tbl,.ag-row')].filter(v => !hidden(v)).map(v => rel(v.getBoundingClientRect()));
     const top = Math.min(...body.map(i => i.rect.top), ...shapes.map(s => s.top)), bottom = Math.max(...body.map(i => i.rect.bottom), ...shapes.map(s => s.bottom));
     if (bottom - top < 1080 * .38) add('warn', 'sparse', `content fills only ${Math.round((bottom - top) / 10.8)}% of the slide height; enlarge it or merge with another slide`, '');
@@ -116,7 +116,6 @@ function inspectSlide(index, limits, layout) {
   }
   if (!slide.dataset.notes || slide.dataset.notes.trim().length < 10) add('warn', 'notes', 'no speaker notes', '');
   return { issues, words };
-  function SPARSE_OK_CHECK(name) { return limits.sparseOk.includes(name); }
 }
 
 async function lintDeck(indexPath, { outDir, sheet = true } = {}) {

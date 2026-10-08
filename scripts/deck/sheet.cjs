@@ -3,8 +3,8 @@
 const fs = require('node:fs');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 
-async function contactSheet(pngPaths, output, { columns } = {}) {
-  const cols = columns || (pngPaths.length <= 4 ? 2 : 3), width = cols === 2 ? 960 : 640, height = width * 9 / 16, gap = 14;
+async function contactSheet(pngPaths, output) {
+  const cols = pngPaths.length <= 4 ? 2 : 3, width = cols === 2 ? 960 : 640, height = width * 9 / 16, gap = 14;
   const rows = Math.ceil(pngPaths.length / cols);
   const canvas = createCanvas(cols * (width + gap) + gap, rows * (height + gap) + gap), ctx = canvas.getContext('2d');
   ctx.fillStyle = '#6b6b70'; ctx.fillRect(0, 0, canvas.width, canvas.height);

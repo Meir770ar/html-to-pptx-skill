@@ -32,6 +32,5 @@ function rich(value) {
 }
 
 const plain = value => String(value ?? '').replace(/\*/g, '');
-const words = value => plain(value).trim().split(/\s+/).filter(Boolean).length;
 
-module.exports = { esc, rich, plain, words, isolate };
+module.exports = { esc, rich, plain, isolate };

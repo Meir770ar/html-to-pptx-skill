@@ -5,7 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { LAYOUTS, COMMON, TONES } = require('./deck/layouts.cjs');
+const { LAYOUTS, COMMON, TONES, chrome } = require('./deck/layouts.cjs');
 const { THEMES, FONTS, resolveTheme, themeCss } = require('./deck/themes.cjs');
 const { esc } = require('./deck/text.cjs');
 
@@ -50,10 +50,10 @@ function build(specPath, outDir, { overwrite = false } = {}) {
     if (!fs.existsSync(absolute)) throw new Error(`Image not found: ${src} (looked in ${base})`);
     if (!IMAGE_TYPES.has(path.extname(absolute).toLowerCase())) throw new Error(`Unsupported image type: ${src}`);
     if (!copied.has(absolute)) {
-      const hash = crypto.createHash('sha1').update(fs.readFileSync(absolute)).digest('hex').slice(0, 8);
+      const data = fs.readFileSync(absolute), hash = crypto.createHash('sha1').update(data).digest('hex').slice(0, 8);
       const name = `${hash}-${path.basename(absolute).replace(/[^\w.\-]+/g, '_')}`;
       fs.mkdirSync(path.join(out, 'assets'), { recursive: true });
-      fs.copyFileSync(absolute, path.join(out, 'assets', name));
+      fs.writeFileSync(path.join(out, 'assets', name), data);
       copied.set(absolute, `assets/${name}`);
     }
     return copied.get(absolute);
@@ -64,11 +64,10 @@ function build(specPath, outDir, { overwrite = false } = {}) {
     const layout = LAYOUTS[slide.layout];
     if (slide.layout === 'section') sectionNo++;
     const tone = slide.tone || layout.tone(theme);
-    const ctx = { theme, deck: spec, index, total: spec.slides.length, frag: slide.fragments === true, asset, sectionNo };
+    const ctx = { theme, deck: spec, index, frag: slide.fragments === true, asset, sectionNo };
     let html;
     try { html = layout.render(slide, ctx); } catch (error) { throw new Error(`Slide ${index + 1} (${slide.layout}): ${error.message}`); }
-    const chrome = layout.chrome !== false && slide.chrome !== false && spec.chrome !== false && !html.includes('data-chrome');
-    if (chrome) html += `<div class="chrome" data-chrome><span class="brand">${esc(spec.brand || '')}</span><span class="pg">${String(index + 1).padStart(2, '0')}</span></div>`;
+    if (layout.chrome !== false) html += chrome(ctx);
     const classes = ['slide', `L-${slide.layout}`, `tone-${tone}`, layout.classes?.(slide)].filter(Boolean).join(' ');
     return `<section class="${classes}${index === 0 ? ' is-active' : ''}" data-pptx-slide data-layout="${slide.layout}" id="${esc(slide.id || `s${index + 1}`)}" data-notes="${esc(slide.notes || '')}">${html}</section>`;
   });
@@ -105,7 +104,7 @@ ${sections.join('\n')}
   fs.copyFileSync(path.join(ROOT, 'assets/deck-runtime.js'), path.join(out, 'deck-runtime.js'));
   fs.writeFileSync(path.join(out, 'index.html'), html);
   fs.copyFileSync(specFile, path.join(out, 'deck.spec.json'));
-  return { out, index: path.join(out, 'index.html'), slides: spec.slides.length, theme: theme.name, fontsNeeded: [...used].filter(f => FONTS[f]).map(f => ({ family: f, ttf: FONTS[f].ttf })) };
+  return { out, index: path.join(out, 'index.html'), slides: spec.slides.length, theme: theme.name, dir, fontsNeeded: [...used].filter(f => FONTS[f]).map(f => ({ family: f, ttf: FONTS[f].ttf })) };
 }
 
 module.exports = { build, validateSpec };
