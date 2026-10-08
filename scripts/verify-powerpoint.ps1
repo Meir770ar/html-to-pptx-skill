@@ -25,7 +25,10 @@ try {
       }
     }
     $png = Join-Path $targetPath ('slide-{0:D2}.png' -f $slide.SlideIndex)
-    $slide.Export($png, 'PNG', $Width, $Height)
+    # Slide.Export occasionally fails transiently while PowerPoint is still laying out; retry before giving up.
+    for ($attempt = 1; $attempt -le 6; $attempt++) {
+      try { $slide.Export($png, 'PNG', $Width, $Height); break } catch { if ($attempt -eq 6) { throw }; Start-Sleep -Milliseconds 800 }
+    }
     $slides += @{ index=$slide.SlideIndex; shapes=$slide.Shapes.Count; textBoxes=$textCount; pictures=$pictureCount; tables=$tableCount; text=$text; png=$png }
   }
   $receipt = @{ application='Microsoft PowerPoint'; source=$sourcePath; slideCount=$deck.Slides.Count; width=$Width; height=$Height; slides=$slides }

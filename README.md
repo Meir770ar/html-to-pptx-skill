@@ -1,10 +1,12 @@
-# מצגות HTML אינטראקטיביות ו־PowerPoint — גרסה 2.2
+# מצגות מקצועיות בעברית: JSON אחד, HTML אינטראקטיבי ו־PowerPoint
 
-סקיל לסוכני AI שיוצרים מצגות בעברית: מקור HTML אינטראקטיבי עם מושן גרפי, ולצדו יצוא ל־PowerPoint. מתאים ל־Claude Code ול־Codex דרך קובץ `SKILL.md`.
+סקיל לסוכני AI (Claude Code, Codex) שיוצר מצגות ברמה גבוהה. כותבים את התוכן, והמערכת מטפלת בכל השאר: טיפוגרפיה עברית, צבעים בדוקי ניגודיות, 17 פריסות, גרפים וטבלאות אמיתיים, אמנות גנרטיבית, תנועה, הערות מרצה, ובדיקת איכות אוטומטית שעוצרת פגמים לפני המסירה.
 
-## התקנה מהמאגר
+![גיליון תצוגה של מצגת ההדגמה](docs/contact-sheet.png)
 
-דרישות: Node.js 22.13 ומעלה ו־Chrome, Edge או Chromium. PowerPoint נדרש רק לבדיקה ולרינדור PPTX בתוכנה עצמה.
+## התקנה
+
+דרישות: Node.js 22.13 ומעלה ו־Chrome, Edge או Chromium. PowerPoint נדרש רק לרינדור הוכחה בתוכנה עצמה.
 
 ```bash
 git clone https://github.com/Meir770ar/html-to-pptx-skill.git html-to-pptx
@@ -12,52 +14,69 @@ cd html-to-pptx
 npm ci
 ```
 
-לשימוש כסקיל, העתיקו את תיקיית המאגר אל `~/.claude/skills/html-to-pptx` או `~/.codex/skills/html-to-pptx`. הוראות נוספות ב־[SETUP.md](SETUP.md).
+לשימוש כסקיל, העתיקו את התיקייה אל `~/.claude/skills/html-to-pptx` או `~/.codex/skills/html-to-pptx`. פרטים ב־[SETUP.md](SETUP.md).
 
-## יצירה ויצוא
+## שימוש
 
-**חדש:** שדרוג עיצוב של PPTX קיים תוך נעילת התוכן והערות המרצה, וקבלת שפה עיצובית מאתר, ספר/PDF, תמונות עמודים או מצגת רפרנס. הסוכן מנתח את הדוגמאות ומכין פרופיל עיצוב; הכלים אוספים ראיות, מחילים תוכנית עיצוב ובודקים שימור. אין להבטיח שכל אובייקט מורכב ניתן לעיצוב מחדש אוטומטי.
+```bash
+node scripts/make-deck.cjs examples/demo.json out/ --overwrite
+```
+
+הפקודה עושה הכול בריצה אחת:
+
+1. **בונה** מצגת HTML אינטראקטיבית מה־spec: ניווט מקלדת, חשיפות, מצב מרצה, מסך מלא.
+2. **בודקת עיצוב** בדפדפן אמיתי: גלישה, חפיפות, גודל טקסט, ניגודיות, צפיפות, קצב המצגת, תמונות בלי alt.
+3. **מייצאת PowerPoint:** `deck.pptx` (טקסט, צורות, טבלאות וגרפים ניתנים לעריכה) ו־`deck-faithful.pptx` (תמונות, נאמן לגמרי).
+4. **מפיקה הוכחות:** תמונה לכל שקופית וגיליון תצוגה אחד לכל המצגת. ב־Windows עם PowerPoint, `--powerpoint` מרנדר את הקבצים בתוכנה עצמה.
+
+מה כתוב ב־spec ומה אפשר לעשות: [references/spec-reference.md](references/spec-reference.md). מה הופך מצגת לטובה: [references/design-principles.md](references/design-principles.md). דוגמה מלאה: [examples/demo.json](examples/demo.json).
+
+```json
+{
+  "title": "שם המצגת",
+  "theme": "editorial",
+  "brand": "שם המרצה",
+  "slides": [
+    { "layout": "cover", "title": "כותרת עם *הדגשה*", "subtitle": "משפט תמיכה", "notes": "מה אומרים" },
+    { "layout": "points", "title": "שלושה עקרונות", "items": [
+      { "icon": "target", "title": "מטרה אחת", "text": "משפט קצר." },
+      { "icon": "clock", "title": "קצב קבוע", "text": "משפט קצר." },
+      { "icon": "shield", "title": "שקיפות", "text": "משפט קצר." } ] },
+    { "layout": "closing", "title": "מסר אחד ופעולה אחת", "action": "הצעד הבא" }
+  ]
+}
+```
+
+## ערכות נושא ופריסות
+
+שש ערכות (`editorial`, `midnight`, `bold`, `corporate`, `sage`, `noir`) ו־17 פריסות: פתיחה, תוכן, מפריד פרק, משפט, כרטיסים, מספר ענק, מדדים, השוואה, תהליך, גרף פסים ועמודות, ציטוט, תמונה, פיצול, גלריה, טבלה, סיום, ומוצא חירום ב־HTML חופשי. צבעי מותג מוגדרים ב־`palette` והמערכת מתקנת ניגודיות לבד.
+
+הפונטים (Heebo, Rubik, Frank Ruhl Libre, Secular One) ברישיון SIL OFL וכלולים. להתקנתם עבור `deck.pptx`: `node scripts/install-fonts.cjs`.
+
+## שדרוג מצגת קיימת והמרת HTML
 
 ```bash
 node scripts/redesign-pptx.cjs restyle source.pptx redesigned.pptx --preset=editorial --layout=auto
 node scripts/redesign-pptx.cjs verify source.pptx redesigned.pptx
-node scripts/style-reference.cjs capture book.pdf reference.style-work --pages=1,2,3
+node scripts/html-to-pptx.js deck.html out.pptx --mode=editable --rtl
 ```
 
-הדרכה: [שדרוג מצגת קיימת](references/redesign-existing.md) · [שפה עיצובית מרפרנס](references/reference-design-language.md). מקור המצגת נשמר; נשמרים גם טקסט, הערות, תמונות, נתוני תרשימים וקישורים. בדיקת שימור אינה תחליף לבדיקה חזותית של חיתוך, חפיפות וקריאות.
-
-הסקיל כולל תכנון למצגת עם מושן, תבנית עצמאית עם ניווט/חשיפות/הערות, וממיר שמודד את הפריסה בדפדפן. אין צורך ב־API או במנוי בתשלום עבור התבנית והיצוא.
-
-```bash
-npm ci
-node scripts/init-deck.cjs my-presentation
-node scripts/html-to-pptx.js my-presentation/index.html faithful.pptx --mode=image --rtl
-node scripts/html-to-pptx.js my-presentation/index.html editable.pptx --mode=editable --rtl
-npm test
-```
-
-פתחו את `my-presentation/index.html` בדפדפן. חצים/Space לניווט ולחשיפות, F למסך מלא, N להערות. כפתור מצב מרצה פותח חלון קהל מסונכרן; שתפו את חלון/טאב הקהל בשיחת וידאו כדי שההערות יישארו אצל המרצה.
-
-אפשר להריץ שרת מקומי מהתיקייה לצורך חלון קהל מסונכרן בין טאבּים באותו origin:
-
-```bash
-python -m http.server 8000 --bind 127.0.0.1 --directory my-presentation
-```
-
-פתחו `http://127.0.0.1:8000`. שינוי בהערות נשמר מקומית בדפדפן; להכללה ב־PPTX עדכנו את `data-notes` במקור. אל תציגו שמירת הערות מקומית ככתיבה אוטומטית ל־HTML.
+שדרוג עיצוב נועל את התוכן וההערות ובודק שימור: [references/redesign-existing.md](references/redesign-existing.md), [references/reference-design-language.md](references/reference-design-language.md). חוזה הייצוא של המרת HTML שרירותי: [references/export-contract.md](references/export-contract.md).
 
 | יצוא | מראה | עריכה |
 |---|---|---|
 | `image` | צילום הדפדפן ברזולוציה גבוהה | תמונה אחת לשקופית |
 | `hybrid` | עיצוב הדפדפן עם טקסט Office | טקסט רגיל; הגרפיקה ברקע |
-| `editable` | פריסת DOM עם רכיבי Office | טקסט, צורות בסיסיות, טבלאות פשוטות ותמונות; אפקטים לא נתמכים מצולמים |
+| `editable` | פריסת DOM עם רכיבי Office | טקסט, צורות, טבלאות ותמונות; אפקטים לא נתמכים מצולמים |
 
-RTL נמדד לפי המקור. תוכן מעורב עשוי להתפצל לכמה תיבות. אין הבטחה שזהות חזותית מלאה וגם עריכה מלאה אפשריות לכל HTML. אנימציות ואינטראקציות נשארות ב־HTML; PPTX כולל מצב סופי/חשיפות ומעבר Fade בסיסי. הרחבה: [SKILL.md](SKILL.md), [חוזה היצוא](references/export-contract.md), [עיצוב ומושן](references/authoring-and-motion.md).
+אנימציות ואינטראקציות נשארות ב־HTML. ב־PowerPoint נשמרים מצב סופי, חשיפות לפי בקשה (`--fragments=steps`) ומעבר Fade. הערות המרצה נשמרות.
 
-ב־Windows עם PowerPoint מותקן אפשר להפיק הוכחות פלט:
+## בדיקות
 
-```powershell
-./scripts/verify-powerpoint.ps1 -Pptx faithful.pptx -OutputDir office-proof
+```bash
+npm test
 ```
 
-החבילה אינה כוללת node_modules, פונטים מסחריים, credentials או תוצאות פרטיות. היא כוללת package-lock.json, תבנית ושלוש בדיקות התנהגות עיקריות: שימור השקופיות, אובייקטים נפרדים/RTL והחשיפות האינטראקטיביות, יחד עם מקרי כשל.
+הבדיקות מכסות: ניגודיות בכל הערכות, טיפול בטקסט מעורב, תקינות ה־spec, בנייה ובדיקת עיצוב של כל הפריסות בכמה ערכות, זיהוי פגמים אמיתיים, ייצוא PowerPoint (כולל סדר `72%` ושקופיות מרובות עם אייקונים), מצגת אנגלית משמאל לימין, שימור תוכן בשדרוג ושחזור שקופיות.
+
+החבילה אינה כוללת credentials או מידע אישי. הפונטים הכלולים הם קוד פתוח בלבד.

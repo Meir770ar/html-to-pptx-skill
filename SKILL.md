@@ -1,72 +1,67 @@
 ---
 name: html-to-pptx
-description: Create and redesign HTML or existing PowerPoint presentations with Hebrew RTL, motion graphics and locked content/speaker notes. Extract a requested design language from websites, books/PDFs, screenshots or reference decks, then apply it to a new or existing presentation and verify preservation.
+description: Create professional presentations (Hebrew RTL or English) from a short JSON spec. Designed themes, 17 layouts, real charts and tables, motion, speaker notes, an automatic design lint, then export to editable PowerPoint (PPTX) plus an image-faithful PPTX. Also redesigns an existing PPTX with locked content and converts any HTML deck to PPTX. Use for any request to make, improve, redesign or convert a presentation, slides, deck, מצגת, פיירפוינט, שקפים.
 ---
 
-# מצגות אינטראקטיביות עם מושן ויצוא PowerPoint
+# מצגות מקצועיות: מ־spec אחד ל־HTML אינטראקטיבי ול־PowerPoint
 
-בנו מקור HTML אחד עם סיפור ברור, טיפוגרפיה, מושן גרפי, חשיפות מדורגות, ניווט ומצב מרצה. הפיקו ממנו PPTX באמצעות הפריסה שהדפדפן חישב, ולא באמצעות חילוץ טקסט ובניית עיצוב אחר.
+הידע העיצובי נמצא בקוד, לא בהוראות. כותבים רק את התוכן (קובץ JSON), ומערכת העיצוב מפיקה שקופיות עם טיפוגרפיה עברית, ערכות צבע בדוקות ניגודיות, 17 פריסות, גרפים וטבלאות אמיתיים, אמנות גנרטיבית ותנועה. בדיקת איכות אוטומטית עוצרת חיתוך, חפיפה, טקסט זעיר, ניגודיות נמוכה וקירות טקסט לפני שהקובץ נמסר.
 
-## תוכן קיים או שפה עיצובית מרפרנס
+## הכנה (פעם אחת)
 
-כשמקבלים מצגת מוכנה מבחינת תוכן והערות, שנו עיצוב בלבד: אין לשכתב, לקצר, להוסיף, למחוק או לסדר מחדש את התוכן ללא בקשה לכך. למצגת PPTX קיימת קראו [redesign-existing.md](references/redesign-existing.md): inspect → תכנון עיצוב לפי אובייקטים קיימים → apply → בדיקת שימור → רינדור ובדיקה חזותית. הקובץ המקורי נשמר, וההערות, התמונות, התרשימים, הנתונים והקישורים נשארים בחבילה המקורית.
+הריצו מהתיקייה שבה נמצא `SKILL.md`. אם אין `node_modules`: `npm ci` (Node 22.13 ומעלה ו־Chrome/Edge). פרטים ב־[SETUP.md](SETUP.md).
 
-אם מבוקשת שפה עיצובית מאתר, ספר/PDF, עמודים מצולמים או מצגת אחרת, קראו תחילה [reference-design-language.md](references/reference-design-language.md). אספו ראיות, התבוננו בדוגמאות והפיקו פרופיל עיצוב עם צבעים, טיפוגרפיה, היררכיה, מרווחים, קומפוזיציה, טיפול בתמונות ומושן מתאים. פרופיל שנוצר אוטומטית הוא טיוטת תצפיות; הסוכן חייב לקרוא את הראיות ולהשלים את השפה לפני `reviewed:true`. זו בדיקת המחבר ולא דרישה לאישור נוסף מן המשתמש. אין להעתיק תוכן, לוגו או נכסים מן הרפרנס כשנתבקשה רק השפה העיצובית.
+## תהליך העבודה
+
+1. **הבינו את המשימה.** קהל, מטרה, אורך, שפה, אווירה, מותג או צבעים קיימים, ותמונות שיש למשתמש. שאלו שאלה אחת קצרה רק אם חסר פרט שמשנה את התוצאה; אחרת קבעו הנחה וציינו אותה בסיום.
+2. **תכננו את הסיפור לפני העיצוב.** קראו את [design-principles.md](references/design-principles.md): כותרות הן טענות, רעיון אחד לשקופית, תקציב מילים, קצב ומפרידים. כתבו את התוכן האמיתי ואת הערות המרצה. אין טקסטי מילוי ואין נתונים מומצאים בלי סימון "נתון להמחשה".
+3. **בחרו ערכת נושא ופריסות.** טבלת הערכות ורשימת הפריסות והשדות ב־[spec-reference.md](references/spec-reference.md). שנו פריסה כל שקופית או שתיים. צבעי מותג: `palette`. פונט מורשה של המשתמש: `fonts` + `fontFiles`.
+4. **כתבו את `deck.json`** (התחילו מ־[examples/demo.json](examples/demo.json)). תמונות הן נתיבים יחסיים לקובץ ה־JSON, ותמיד עם `alt`.
+5. **הריצו את הצינור:**
 
 ```bash
-node scripts/style-reference.cjs capture reference.pdf reference.style-work --pages=1,2,3
-node scripts/style-reference.cjs capture https://example.com reference.style-work
-node scripts/redesign-pptx.cjs inspect source.pptx source.pptx-work --layout=auto
-node scripts/redesign-pptx.cjs apply source.pptx source.pptx-work/design.redesign.json redesigned.pptx
-node scripts/redesign-pptx.cjs verify source.pptx redesigned.pptx
+node scripts/make-deck.cjs deck.json out/ --overwrite --powerpoint
 ```
 
-ל־HTML קיים, שמרו עותק לפני שינוי והריצו `node scripts/content-lock.cjs verify before.html after.html`. בדיקה זו משווה טקסט לפי סדר השקופיות, הערות, יעדי קישורים והפניות למדיה; בדיקת PPTX משווה גם את כל חלקי החבילה המוגנים בבייטים. הצלחת בדיקת התוכן אינה מבטיחה קריאות, ניגודיות או היעדר חפיפות — בדקו גם את הפלט החזותי.
+   הפקודה בונה את המצגת, מריצה את בדיקת העיצוב, ואם אין שגיאות מייצאת `out/export/deck.pptx` (ניתן לעריכה), `deck-faithful.pptx` (תמונות, נאמן ב־100%) ותיקיית `fonts-to-install`. הדגל `--powerpoint` (Windows עם PowerPoint) מרנדר את הקבצים ב־PowerPoint עצמו, והוא ההוכחה הטובה ביותר למראה שהמשתמש יראה. ללא PowerPoint השמיטו אותו.
+6. **תקנו עד שנקי.** הפלט מפרט שגיאות (`ERROR`) ואזהרות לפי מספר שקופית. תקנו ב־spec והריצו שוב. שגיאה חוסמת את הייצוא. אזהרות: תקנו כל מה שאפשר, והסבירו בסיום מה השארתם ולמה.
+7. **הסתכלו בעיניים.** פתחו `out/proof/contact-sheet.png` (כל המצגת בתמונה אחת) ואחר כך כל שקופית ב־`out/proof/slide-NN.png`, ואם הרצתם `--powerpoint`, גם `out/export/powerpoint-editable/contact-sheet.png`. הבדיקה האוטומטית אינה מחליפה עין: חפשו שורה אחרונה עם מילה בודדת, ריקנות לא מאוזנת, תמונה שנחתכה בצורה לא טובה, רצף משעמם. תקנו והריצו שוב. עצרו אחרי שלושה סבבים.
+8. **מסרו.** ציינו איזה קובץ מתאים למה, והתקנת פונטים (ראו למטה).
 
-## הרכבת היכולות
+## כללי איכות שלא מדלגים עליהם
 
-כשמותקנים הסקילים המתאימים, השתמשו ב־`presentation-architect` לתכנון הסיפור; ב־`hyperframes` → `slideshow` למצגת HyperFrames עם מצב מרצה וניווט מסתעף; וב־`hyperframes-animation` למושן. `cinematic-slides` הוא כיוון אופציונלי לרקע קולנועי, ולא הרשאה ליצור וידאו בתשלום או לפרסם.
+- לא מסירים קובץ אחרי שגיאת lint או בלי שראיתם את `contact-sheet.png`.
+- לא ממציאים נתונים, ציטוטים או לוגואים. נתון להמחשה מסומן כך על השקופית.
+- לא משנים את קובצי המערכת (CSS, פריסות) כדי "לסדר" שקופית אחת. מסדרים את התוכן. הפריסה `custom` היא מוצא אחרון.
+- לא מפרסמים, שולחים או מעלים בלי הרשאה למשימה.
 
-הסקיל הזה כולל גם תבנית אינטראקטיבית עצמאית ומתכוני עיצוב ומושן, כדי לעבוד אצל חבר בלי התקנת כל הסקילים האחרים. קראו [authoring-and-motion.md](references/authoring-and-motion.md) לפני יצירת HTML חדש. למצגת HyperFrames השתמשו במקור הקומפוזיציה וב־export hook; אין צורך לייצא סרטון לינארי.
+## מה למסור ואיך להסביר
 
-## בחירת היצוא לפי הדרישה
+| קובץ | מתאים ל | הערה |
+|---|---|---|
+| `out/index.html` | הצגה בדפדפן עם תנועה, חשיפות, מצב מרצה (N), מסך מלא (F) | הקובץ המלא. אנימציות קיימות רק כאן |
+| `export/deck.pptx` | עריכה ב־PowerPoint: טקסט, צורות, טבלאות וגרפים אמיתיים | הפונטים חייבים להיות מותקנים (ראו למטה). אייקונים ואמנות הם תמונות |
+| `export/deck-faithful.pptx` | שליחה והצגה בלי לגעת | כל שקופית היא תמונה, לא ניתנת לעריכה, לא צריכה פונטים |
 
-| מצב | מה מתקבל |
-|---|---|
-| `image` | צילום נפרד ברזולוציה גבוהה לכל שקופית. מתאים כשאותו מראה הוא הדרישה הראשית. הטקסט והגרפיקה אינם אלמנטים נפרדים לעריכה |
-| `hybrid` | עיצוב דפדפן כרקע וטקסט רגיל כאובייקטים ניתנים לעריכה. מתאים לעיצוב מורכב. טבלאות וצורות ברקע אינן מובטחות כאובייקטים נפרדים |
-| `editable` | טקסט, צורות בסיסיות, טבלאות פשוטות ותמונות כאובייקטים נפרדים. אפקטים לא נתמכים נשמרים כתמונה ומפורטים בדוח |
+**פונטים.** הפונטים בערכות הם קוד פתוח וכלולים בחבילה. כדי ש־`deck.pptx` ייראה כמו ה־HTML, יש להתקין אותם במחשב שפותח אותו: לחיצה כפולה על הקבצים ב־`export/fonts-to-install` ואז "התקן", או `node scripts/install-fonts.cjs` (למשתמש הנוכחי בלבד; `--uninstall` מסיר). הריצו את ההתקנה רק באישור המשתמש. בלי הפונטים PowerPoint מחליף בפונט אחר והפריסה זזה. אנימציות ה־HTML אינן מתורגמות ל־PowerPoint; נשמר מעבר Fade. הערות מרצה נשמרות.
 
-כשנדרשים גם מראה נאמן וגם עריכה, מסרו שני קבצים: גרסת `image` נאמנה למקור וגרסת `editable` או `hybrid` שנבדקה. אל תטענו שכל HTML ניתן להמרה זהה וגם מלאה לעריכה. `--require-editable` במצב `editable` חוסם המרה כשנדרש צילום של אפקט או טקסט. תמונות מקור יכולות להישאר תמונות נפרדות.
+## מקרים אחרים
 
-RTL אינו רק יישור לימין: השאירו עברית בסדר לוגי, `dir="rtl"` ברמת המסמך ואיי English/מספרים ב־`bdi` או `dir="ltr"`. היצוא מודד מקטעים חזותיים בדפדפן ושומר כיוון בכל תיבת טקסט. מקטעים מעורבים עשויים להפוך לכמה תיבות. פונטים במחשב היעד חייבים להתאים; אין להפיץ פונטים מסחריים בלי רישיון.
+- **מצגת PPTX קיימת לשדרג עיצוב בלי לגעת בתוכן:** [redesign-existing.md](references/redesign-existing.md). `redesign-pptx.cjs inspect | apply | verify`.
+- **שפה עיצובית מאתר, ספר או PDF:** [reference-design-language.md](references/reference-design-language.md).
+- **HTML קיים להמיר ל־PPTX:** `node scripts/html-to-pptx.js file.html out.pptx --mode=editable --rtl` (חוזה הייצוא ב־[export-contract.md](references/export-contract.md)). `--mode=image` לנאמנות מלאה, `--mode=hybrid` לעיצוב מורכב עם טקסט ניתן לעריכה.
+- **מצגת HTML בכתב יד מלא (בלי ה־spec):** התבנית הישנה `node scripts/init-deck.cjs NAME` ו־[authoring-and-motion.md](references/authoring-and-motion.md). רק כשהפריסות של המערכת באמת לא מספיקות.
+- **בדיקת עיצוב של HTML קיים:** `node scripts/lint-deck.cjs path/index.html` (שקופיות מסומנות `data-pptx-slide`).
+- **תוכן קיים שחייב להישאר זהה:** `node scripts/content-lock.cjs verify before.html after.html`.
 
-## הפעלה
-
-הריצו מהתיקייה שבה נמצא `SKILL.md`. להתקנה ראשונה קראו [SETUP.md](SETUP.md).
+## פקודות
 
 ```bash
-node scripts/init-deck.cjs my-presentation
-node scripts/html-to-pptx.js my-presentation/index.html faithful.pptx --mode=image --rtl
-node scripts/html-to-pptx.js my-presentation/index.html editable.pptx --mode=editable --rtl
-```
-
-הפקודה יוצרת גם דוח `.report.json` ותיקיית `.proof` עם מקור PNG לכל שקופית. קבצים קיימים אינם נדרסים בלי `--overwrite`. נשמרות הערות מרצה; ניווט וחשיפות נשארים ב־HTML. `--fragments=steps` מייצא מצב התחלתי ועוד שקופית לכל חשיפה, כשהמקור מספק hook מתאים. מעבר Fade בסיסי ב־PowerPoint מופעל כברירת מחדל; `--transition=none` מבטל אותו.
-
-```bash
-node scripts/html-to-pptx.js my-presentation/index.html reveals.pptx --mode=image --rtl --fragments=steps
-node scripts/html-to-pptx.js simple.html strict.pptx --mode=editable --rtl --require-editable
+node scripts/make-deck.cjs deck.json out/ --overwrite --powerpoint   # הכול: בנייה, בדיקה, ייצוא, רינדור
+node scripts/build-deck.cjs deck.json out/ --overwrite               # רק בנייה
+node scripts/lint-deck.cjs out/index.html                            # רק בדיקת עיצוב + גיליון תצוגה
+node scripts/install-fonts.cjs [--dry-run|--uninstall]               # פונטים למשתמש הנוכחי
 npm test
 ```
 
-קראו [export-contract.md](references/export-contract.md) כשממירים מקור קיים או משלבים GSAP, canvas, וידאו, HyperFrames או JavaScript דינמי.
-
-## בדיקה ומסירה
-
-בדקו את המצגת בדפדפן: ניווט מקלדת, חשיפות, הסתעפות, הערות, מסך קטן ו־reduced motion. לאחר היצוא קראו את הדוח והשוו את כל שקופיות PowerPoint למקור שב־`.proof`, במיוחד תוכן מעורב, תבליטים, טבלאות וגרפיקה. ב־Windows עם PowerPoint מותקן:
-
-```powershell
-./scripts/verify-powerpoint.ps1 -Pptx faithful.pptx -OutputDir office-proof
-```
-
-התאמת תמונות ומבנה PPTX אינה הוכחה שכל האנימציות עברו. אנימציות CSS/GSAP, אינטראקציות, WebGL ומדיה נשארות ב־HTML; ב־PPTX נשמרים מצבי יצוא מוגדרים ומעבר Fade. אל תמציאו שקילות בין שני המנועים. במסירה ציינו אילו קבצים ניתנים לעריכה ואילו אלמנטים נשארו כתמונה. אין לפרסם, לשלוח או לצרוך קרדיטים ללא הרשאה למשימה.
+דגלים של `make-deck`: `--force` (ייצוא למרות שגיאות lint; רק כשהמשתמש מבקש במפורש), `--no-export`, `--powerpoint`.

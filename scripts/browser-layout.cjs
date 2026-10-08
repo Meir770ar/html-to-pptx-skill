@@ -180,6 +180,8 @@ function extractLayout(root, config) {
       }
     }
   }
+  // Ids are only unique inside one slide. Clear stale ids from earlier slides so lookups by id can never hit a hidden element.
+  document.querySelectorAll('[data-pptx-node]').forEach(el => delete el.dataset.pptxNode);
   for (const el of all) el.dataset.pptxNode = ids.get(el);
   const excludedText = [...excludes].filter(el => el.textContent.trim() && !el.matches('TABLE') && ![...excludes].some(p => p !== el && p.contains(el))).map(el => ({ element: ids.get(el), characters: el.textContent.trim().length }));
   const hiddenTextStyle = '[data-pptx-text-hidden], [data-pptx-text-hidden] * { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; text-shadow: none !important; caret-color: transparent !important; } [data-pptx-text-hidden]::marker { color: transparent !important; -webkit-text-fill-color: transparent !important }';

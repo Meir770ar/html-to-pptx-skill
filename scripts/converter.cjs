@@ -114,7 +114,11 @@ async function captureElement(page, el, omitBackground = false) {
   // Beyond-viewport capture can blank composited/RTL content in newer Chrome.
   return page.screenshot({ type: 'png', clip: rect, captureBeyondViewport: false, omitBackground });
 }
-async function screenshotNode(page, id) { const el = await page.$(`[data-pptx-node="${id}"]`); if (!el) throw new Error(`Measured DOM element disappeared: ${id}`); return captureElement(page, el, true); }
+async function screenshotNode(page, id) {
+  const el = await page.$(`[data-pptx-node="${id}"]`); if (!el) throw new Error(`Measured DOM element disappeared: ${id}`);
+  try { return await captureElement(page, el, true); }
+  catch (error) { const what = await el.evaluate(e => `${e.tagName.toLowerCase()}${e.getAttribute('class') ? `.${e.getAttribute('class').trim().replace(/s+/g, '.')}` : ''}`); throw new Error(`${error.message} (while rasterizing <${what}>)`); }
+}
 
 function addTable(slide, table, unit) {
   const rows = table.rows.map(row => row.map(cell => ({ text: cell.text, options: { fontFace: cell.style.font, fontSize: cell.style.size * unit * 72, color: cell.style.color, bold: cell.style.bold,

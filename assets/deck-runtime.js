@@ -12,24 +12,50 @@
   const readNotes = slide => { try { return localStorage.getItem(key(slide)) ?? slide.dataset.notes ?? ''; } catch { return slide.dataset.notes || ''; } };
   function scale() { document.documentElement.style.setProperty('--deck-scale', Math.min(innerWidth / 1920, innerHeight / 1080)); }
   function stop() { animations.forEach(a => a.cancel()); animations = []; cancelAnimationFrame(countFrame); }
-  function animate(el, frames, timing) { if (!reduce.matches && !document.documentElement.dataset.pptxExporting) animations.push(el.animate(frames, { duration: 650, easing: 'cubic-bezier(.2,.8,.2,1)', ...timing })); }
+  function animate(el, frames, timing) { if (!reduce.matches && !document.documentElement.dataset.pptxExporting) animations.push(el.animate(frames, { duration: 650, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards', ...timing })); }
+  const numberText = (el, value) => { const d = Number(el.dataset.decimals || 0); return new Intl.NumberFormat('he-IL', { minimumFractionDigits: d, maximumFractionDigits: d }).format(d ? value : Math.round(value)); };
   function counts(slide, immediate) {
     const targets = [...slide.querySelectorAll('[data-count]')];
     const frame = begin => now => {
       const progress = Math.min(1, (now - begin) / 1100), eased = 1 - (1 - progress) ** 3;
-      targets.forEach(el => { el.textContent = new Intl.NumberFormat('he-IL').format(Math.round(Number(el.dataset.count) * eased)); });
+      targets.forEach(el => { el.textContent = numberText(el, Number(el.dataset.count) * eased); });
       if (progress < 1) countFrame = requestAnimationFrame(frame(begin));
     };
-    if (immediate || reduce.matches) targets.forEach(el => { el.textContent = new Intl.NumberFormat('he-IL').format(Number(el.dataset.count)); });
+    if (immediate || reduce.matches) targets.forEach(el => { el.textContent = numberText(el, Number(el.dataset.count)); });
     else countFrame = requestAnimationFrame(now => frame(now)(now));
   }
+  const FROM = {
+    rise: { transform: 'translateY(40px)', opacity: 0 }, fade: { opacity: 0 }, scale: { transform: 'scale(.9)', opacity: 0 },
+    draw: { transform: 'scaleX(0)', opacity: 1 }, grow: { transform: 'scaleY(0)', opacity: 1 },
+    tilt: { transform: 'perspective(1000px) rotateY(-16deg) translateY(40px)', opacity: 0 },
+    slide: { transform: `translateX(${document.dir === 'rtl' ? 80 : -80}px)`, opacity: 0 },
+  };
+  function splitWords(el) {
+    if (el.dataset.split) return [];
+    el._original = el.innerHTML; el.dataset.split = '1';
+    const spans = [];
+    const walk = node => [...node.childNodes].forEach(child => {
+      if (child.nodeType === 3) {
+        const fragment = document.createDocumentFragment();
+        child.textContent.split(/(s+)/).forEach(part => {
+          if (!part) return;
+          if (/^s+$/.test(part)) fragment.append(part);
+          else { const span = document.createElement('span'); span.style.display = 'inline-block'; span.textContent = part; spans.push(span); fragment.append(span); }
+        });
+        child.replaceWith(fragment);
+      } else if (child.nodeType === 1 && child.tagName !== 'BR') walk(child);
+    });
+    walk(el); return spans;
+  }
+  function unsplitAll() { document.querySelectorAll('[data-split]').forEach(el => { el.innerHTML = el._original; delete el.dataset.split; }); }
   function syncNotes() {
     if (notes) notes.value = readNotes(slides[current]);
     const next = document.querySelector('.next-title');
     if (next) next.textContent = current + 1 < slides.length ? `הבא: ${slides[current + 1].querySelector('h1,h2')?.textContent || ''}` : 'השקופית האחרונה';
   }
   function show(index, step = 0, publish = true, exporting = false) {
-    stop(); current = Math.max(0, Math.min(slides.length - 1, index)); fragment = step;
+    stop(); unsplitAll(); current = Math.max(0, Math.min(slides.length - 1, index)); fragment = step;
+    document.documentElement.style.setProperty('--progress', `${((current + 1) / slides.length) * 100}%`);
     slides.forEach((slide, i) => { slide.classList.toggle('is-active', i === current); slide.setAttribute('aria-hidden', String(i !== current)); });
     const slide = slides[current], fragments = [...slide.querySelectorAll('[data-fragment]')];
     fragments.forEach((el, i) => { el.classList.toggle('is-revealed', i < fragment); el.setAttribute('aria-hidden', String(i >= fragment)); });
@@ -37,9 +63,9 @@
       animate(slide, [{ opacity: 0, transform: 'translateY(26px) scale(.985)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 700 });
       slide.querySelectorAll('[data-motion]').forEach((el, i) => {
         if (el.closest('[data-fragment]') && !el.closest('[data-fragment]').classList.contains('is-revealed')) return;
-        const type = el.dataset.motion;
-        const first = type === 'draw' ? { transform: 'scaleX(0)', opacity: 1 } : type === 'tilt' ? { transform: 'perspective(1000px) rotateY(-16deg) translateY(40px)', opacity: 0 } : { transform: 'translateY(36px)', opacity: 0 };
-        animate(el, [first, { transform: 'none', opacity: 1 }], { delay: Math.min(i * 90, 500) });
+        const type = el.dataset.motion, delay = Math.min(i * 90, 600);
+        if (type === 'words') { splitWords(el).forEach((word, w) => animate(word, [{ transform: 'translateY(.45em)', opacity: 0 }, { transform: 'none', opacity: 1 }], { delay: 120 + w * 55, duration: 600 })); return; }
+        animate(el, [FROM[type] || FROM.rise, { transform: 'none', opacity: 1 }], { delay });
       });
       const ring = slide.querySelector('.orbit-inner'); if (ring && !reduce.matches) animations.push(ring.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg)' }], { duration: 15000, iterations: Infinity }));
     }

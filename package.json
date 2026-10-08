@@ -1,13 +1,16 @@
 {
   "name": "html-to-pptx",
-  "version": "2.2.0",
-  "description": "Interactive HTML presentations with motion graphics and browser-measured RTL PowerPoint export",
+  "version": "3.0.0",
+  "description": "Professional Hebrew/English presentations from a JSON spec: designed themes, layouts, design lint, interactive HTML and PowerPoint export",
   "main": "scripts/html-to-pptx.js",
   "scripts": {
+    "test": "node --test --test-concurrency=1 tests/conversion.test.cjs tests/redesign.test.cjs tests/deck-system.test.cjs",
     "convert": "node scripts/html-to-pptx.js",
-    "test": "node --test --test-concurrency=1 tests/conversion.test.cjs tests/redesign.test.cjs",
+    "deck": "node scripts/make-deck.cjs",
+    "lint": "node scripts/lint-deck.cjs",
     "redesign": "node scripts/redesign-pptx.cjs",
-    "init-deck": "node scripts/init-deck.cjs"
+    "init-deck": "node scripts/init-deck.cjs",
+    "install-fonts": "node scripts/install-fonts.cjs"
   },
   "dependencies": {
     "@xmldom/xmldom": "0.9.12",
@@ -17,14 +20,21 @@
     "jszip": "3.10.1",
     "puppeteer": "25.12.0"
   },
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "keywords": [
     "html",
     "pptx",
     "powerpoint",
     "hebrew",
     "rtl",
-    "converter"
+    "converter",
+    "presentation",
+    "slides",
+    "deck",
+    "design-lint",
+    "themes"
   ],
   "author": "AVIZ",
   "license": "MIT"
