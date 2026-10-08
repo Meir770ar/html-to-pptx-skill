@@ -15,7 +15,8 @@ const JSZip = require('jszip');
     else { const data = await fs.readFile(path.join(skill, relative)); zip.file(`html-to-pptx/${relative.replaceAll(path.sep, '/')}`, data); files.push({ path: relative.replaceAll(path.sep, '/'), sha256: crypto.createHash('sha256').update(data).digest('hex') }); }
   }
   for (const filename of ['SKILL.md', 'README.md', 'SETUP.md', 'CLAUDE.md', 'LICENSE', 'package.json', 'package-lock.json', 'scripts', 'references', 'assets', 'tests']) await include(filename);
-  zip.file('html-to-pptx/package-manifest.json', JSON.stringify({ version: '2.0.0', files }, null, 2));
+  const { version } = JSON.parse(await fs.readFile(path.join(skill, 'package.json'), 'utf8'));
+  zip.file('html-to-pptx/package-manifest.json', JSON.stringify({ version, files }, null, 2));
   const bytes = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
   await fs.mkdir(path.dirname(output), { recursive: true }); await fs.writeFile(output, bytes, { flag: 'wx' });
   console.log(JSON.stringify({ output, files: files.length + 1, bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') }, null, 2));

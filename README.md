@@ -1,10 +1,10 @@
-# מצגות HTML אינטראקטיביות ו־PowerPoint — גרסה 2
+# מצגות HTML אינטראקטיביות ו־PowerPoint — גרסה 2.2
 
 סקיל לסוכני AI שיוצרים מצגות בעברית: מקור HTML אינטראקטיבי עם מושן גרפי, ולצדו יצוא ל־PowerPoint. מתאים ל־Claude Code ול־Codex דרך קובץ `SKILL.md`.
 
 ## התקנה מהמאגר
 
-דרישות: Node.js 22.12 ומעלה ו־Chrome, Edge או Chromium. PowerPoint נדרש רק לבדיקה בתוכנה עצמה.
+דרישות: Node.js 22.13 ומעלה ו־Chrome, Edge או Chromium. PowerPoint נדרש רק לבדיקה ולרינדור PPTX בתוכנה עצמה.
 
 ```bash
 git clone https://github.com/Meir770ar/html-to-pptx-skill.git html-to-pptx
@@ -15,6 +15,16 @@ npm ci
 לשימוש כסקיל, העתיקו את תיקיית המאגר אל `~/.claude/skills/html-to-pptx` או `~/.codex/skills/html-to-pptx`. הוראות נוספות ב־[SETUP.md](SETUP.md).
 
 ## יצירה ויצוא
+
+**חדש:** שדרוג עיצוב של PPTX קיים תוך נעילת התוכן והערות המרצה, וקבלת שפה עיצובית מאתר, ספר/PDF, תמונות עמודים או מצגת רפרנס. הסוכן מנתח את הדוגמאות ומכין פרופיל עיצוב; הכלים אוספים ראיות, מחילים תוכנית עיצוב ובודקים שימור. אין להבטיח שכל אובייקט מורכב ניתן לעיצוב מחדש אוטומטי.
+
+```bash
+node scripts/redesign-pptx.cjs restyle source.pptx redesigned.pptx --preset=editorial --layout=auto
+node scripts/redesign-pptx.cjs verify source.pptx redesigned.pptx
+node scripts/style-reference.cjs capture book.pdf reference.style-work --pages=1,2,3
+```
+
+הדרכה: [שדרוג מצגת קיימת](references/redesign-existing.md) · [שפה עיצובית מרפרנס](references/reference-design-language.md). מקור המצגת נשמר; נשמרים גם טקסט, הערות, תמונות, נתוני תרשימים וקישורים. בדיקת שימור אינה תחליף לבדיקה חזותית של חיתוך, חפיפות וקריאות.
 
 הסקיל כולל תכנון למצגת עם מושן, תבנית עצמאית עם ניווט/חשיפות/הערות, וממיר שמודד את הפריסה בדפדפן. אין צורך ב־API או במנוי בתשלום עבור התבנית והיצוא.
 

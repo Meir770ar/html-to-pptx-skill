@@ -1,0 +1,131 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const os = require('node:os');
+const http = require('node:http');
+const { promisify } = require('node:util');
+const execFile = promisify(require('node:child_process').execFile);
+const PptxGenJS = require('pptxgenjs');
+const { createCanvas } = require('@napi-rs/canvas');
+const P = require('../scripts/pptx-source.cjs');
+const R = require('../scripts/redesign-pptx.cjs');
+const S = require('../scripts/style-reference.cjs');
+const L = require('../scripts/content-lock.cjs');
+let dir, source;
+const { fixture, minimalPdf } = require('./helpers/fixtures.cjs');
+test.before(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'pptx-design-tests-')); source = path.join(dir, 'source.pptx'); await fixture(source); });
+test.after(async () => { if (dir) await fs.rm(dir, { recursive: true, force: true }); });
+test('redesign preserves every protected text, note, link, chart, workbook and image while changing design', async () => {
+  const before = await P.load(source), tokens = await R.profile({ preset: 'editorial' }), plan = R.buildPlan(before, tokens, { layout: 'auto' });
+  const output = path.join(dir, 'restyled.pptx'); await R.apply(source, output, plan);
+  const after = await P.load(output), receipt = P.verify(before, after);
+  assert.equal(receipt.passed, true, JSON.stringify(receipt.errors));
+  assert.ok(receipt.protectedParts > 10); assert.equal(receipt.slides, 3);
+  assert.notEqual(before.parts.get(before.slides[0].filename).toString(), after.parts.get(after.slides[0].filename).toString());
+  assert.notDeepEqual(P.inventory(before).slides[0].objects[0].position, P.inventory(after).slides[0].objects[0].position);
+  assert.ok([...before.parts.keys()].some(n => n.startsWith('ppt/charts/')));
+  assert.ok([...before.parts.keys()].some(n => n.startsWith('ppt/embeddings/')));
+  assert.deepEqual(P.inventory(before).slides.map(s => s.notes), P.inventory(after).slides.map(s => s.notes));
+});
+test('independent verifier rejects a changed word and changed speaker notes', async () => {
+  const original = await P.load(source), altered = await P.load(source);
+  const slide = altered.slides[0]; P.descendants(slide.doc, 'a', 't')[0].textContent = 'תוכן שונה';
+  altered.zip.file(slide.filename, P.xml(slide.doc));
+  let result = P.verify(original, await P.load(await altered.zip.generateAsync({ type: 'nodebuffer' })));
+  assert.equal(result.passed, false); assert.ok(result.errors.some(e => e.includes('protected text')));
+  const notes = [...altered.parts.keys()].find(n => /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(n));
+  const clean = await P.load(source); clean.zip.file(notes, clean.parts.get(notes).toString().replace('הערת', 'שינוי'));
+  result = P.verify(original, await P.load(await clean.zip.generateAsync({ type: 'nodebuffer' })));
+  assert.equal(result.passed, false); assert.ok(result.errors.some(e => e.includes('notesSlide')));
+});
+test('stale plans, text replacement, out-of-bounds positioning and source overwrite are blocked', async () => {
+  const pkg = await P.load(source), plan = R.buildPlan(pkg, await R.profile({}));
+  const bad = structuredClone(plan); bad.sourceSha256 = '0'.repeat(64);
+  await assert.rejects(R.apply(source, path.join(dir, 'stale.pptx'), bad), /does not match/);
+  const text = structuredClone(plan); text.slides[0].objects[0].text = 'החלפה';
+  await assert.rejects(R.apply(source, path.join(dir, 'changed.pptx'), text), /Unsupported object field/);
+  const offscreen = structuredClone(plan); offscreen.slides[0].objects[0].position = { x: -1, y: 0, w: 1, h: 1 };
+  await assert.rejects(R.apply(source, path.join(dir, 'offscreen.pptx'), offscreen), /Invalid x/);
+  await assert.rejects(R.apply(source, source, plan, true), /Never overwrite/);
+  assert.equal(P.sha(await fs.readFile(source)), pkg.sourceSha256);
+});
+test('inspect exports a real source inventory, notes, object IDs and a source-bound design plan', async () => {
+  const work = path.join(dir, 'inspect.pptx-work'); await R.inspect(source, work, { layout: 'auto' });
+  const manifest = JSON.parse(await fs.readFile(path.join(work, 'source.inventory.json')));
+  const plan = JSON.parse(await fs.readFile(path.join(work, 'design.redesign.json')));
+  assert.equal(manifest.slides.length, 3); assert.ok(manifest.slides[0].notes.includes('הערת מרצה מקורית'));
+  assert.equal(plan.sourceSha256, manifest.sourceSha256); assert.ok(plan.slides[0].objects[0].id);
+});
+test('reference capture reads a real PDF/book page and actual rendered colors/fonts', async () => {
+  const pdf = path.join(dir, 'book.pdf'); await fs.writeFile(pdf, minimalPdf());
+  const work = path.join(dir, 'book.style-work'); const result = await S.capture(pdf, work);
+  const observed = JSON.parse(await fs.readFile(path.join(work, 'observations.json')));
+  assert.equal(result.type, 'pdf/book'); assert.equal(result.evidenceCount, 1);
+  assert.equal(observed.totalPages, 1); assert.ok(observed.fonts.some(font => /Times/i.test(font)));
+  assert.ok((await fs.stat(path.join(work, 'reference-page-1.png'))).size > 2000);
+  assert.ok(observed.colors.length > 1);
+});
+test('website reference captures visible examples and computed CSS without copying its text into the target deck', async () => {
+  const server = http.createServer((req, res) => { res.setHeader('Content-Type', 'text/html'); res.end('<html><style>body{background:#f4eddd;color:#1b2933;font-family:Georgia}h1{color:#087b6b;font-size:48px}</style><h1>Reference style</h1><p>Reference content stays in the reference.</p></html>'); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const work = path.join(dir, 'web.style-work'); const result = await S.capture(`http://127.0.0.1:${server.address().port}`, work);
+    const observed = JSON.parse(await fs.readFile(path.join(work, 'observations.json')));
+    assert.equal(result.type, 'website'); assert.equal(observed.background, 'F4EDDD'); assert.equal(observed.titleFont, 'Georgia');
+    assert.ok(observed.colors.some(c => c.color === '087B6B')); assert.ok(result.evidenceCount >= 1);
+    const draft = JSON.parse(await fs.readFile(result.profile)); assert.equal(draft.reviewed, false);
+    await assert.rejects(R.profile({ style: result.profile }), /visually reviewed/);
+    draft.reviewed = true; draft.typography.titleFont = 'Arial'; draft.typography.bodyFont = 'Arial';
+    draft.composition.principles = ['Warm paper background', 'Flat composition', 'Strong serif-like title hierarchy'];
+    await fs.writeFile(result.profile, JSON.stringify(draft));
+    const pkg = await P.load(source), output = path.join(dir, 'reference-style.pptx');
+    await R.apply(source, output, R.buildPlan(pkg, await R.profile({ style: result.profile })));
+    assert.equal(P.verify(pkg, await P.load(output)).passed, true);
+    assert.ok(!P.inventory(await P.load(output)).slides.flatMap(s => s.objects.flatMap(o => o.texts)).includes('Reference style'));
+  } finally { await new Promise(resolve => server.close(resolve)); }
+});
+test('PPTX and image reference paths provide evidence and tokens with review still required', async () => {
+  const reference = await S.capture(source, path.join(dir, 'deck.style-work'));
+  const observations = JSON.parse(await fs.readFile(path.join(reference.reference, 'observations.json')));
+  assert.equal(observations.type, 'pptx'); assert.equal(observations.layout.length, 3); assert.ok(observations.fonts.length);
+  const image = path.join(dir, 'reference.png'), canvas = createCanvas(100, 100), ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#eadcc2'; ctx.fillRect(0, 0, 100, 100); ctx.fillStyle = '#087b6b'; ctx.fillRect(20, 20, 60, 20);
+  await fs.writeFile(image, canvas.toBuffer('image/png'));
+  const captured = await S.capture(image, path.join(dir, 'image.style-work')); assert.equal(captured.evidenceCount, 1); assert.equal(captured.reviewed, false);
+});
+test('HTML design-only edits keep text/notes/media/links; changing a word or note is rejected', async () => {
+  const input = path.join(dir, 'source.html'), output = path.join(dir, 'new-style.html');
+  const html = '<html lang="he" dir="rtl"><style>.slide{width:1920px;height:1080px}</style><section class="slide" data-notes="הערה מוגנת"><h1>כותרת מוגנת</h1><p>English 123 — תוכן קיים</p><a href="https://example.com/reference">קישור</a></section></html>';
+  await fs.writeFile(input, html); await fs.writeFile(output, html.replace('height:1080px', 'height:1080px;background:#eadcc2;color:#123'));
+  assert.equal((await L.verify(input, output)).passed, true);
+  await fs.writeFile(output, html.replace('כותרת מוגנת', 'כותרת אחרת'));
+  assert.equal((await L.verify(input, output)).passed, false);
+  await fs.writeFile(output, html.replace('הערה מוגנת', 'הערה אחרת'));
+  assert.equal((await L.verify(input, output)).passed, false);
+});
+test('new decorations cannot carry invented text and filesystem aliases cannot overwrite the source', async () => {
+  const original = await P.load(source), plan = R.buildPlan(original, await R.profile({}), { layout: 'auto' });
+  const output = path.join(dir, 'decorated.pptx'); await R.apply(source, output, plan);
+  const target = await P.load(output), deco = P.slideObjects(target.slides[0]).find(n => P.descendants(n, 'p', 'cNvPr')[0]?.getAttribute('name').startsWith('_design_decoration_'));
+  assert.ok(deco);
+  const body = P.ensure(deco, 'p', 'txBody'); P.ensure(body, 'a', 'bodyPr'); P.ensure(body, 'a', 'lstStyle');
+  const paragraph = P.ensure(body, 'a', 'p'), run = P.ensure(paragraph, 'a', 'r'); P.ensure(run, 'a', 't').textContent = 'טקסט חדש שלא אושר';
+  target.zip.file(target.slides[0].filename, P.xml(target.slides[0].doc));
+  assert.equal(P.verify(original, await P.load(await target.zip.generateAsync({ type: 'nodebuffer' }))).passed, false);
+  const alias = path.join(dir, 'source-alias.pptx'); await fs.link(source, alias);
+  await assert.rejects(R.apply(source, alias, plan, true), /Never overwrite/);
+  assert.equal(P.sha(await fs.readFile(source)), original.sourceSha256);
+});
+test('reviewed reference profile is applied to a new interactive HTML deck without copying reference content', async () => {
+  const profile = S.draft({ type: 'synthetic-reference', background: 'F5EDD9', colors: ['F5EDD9', '007366', '172C35'], fonts: ['Arial'], evidence: [] });
+  profile.reviewed = true; profile.composition.principles = ['Warm paper palette', 'Flat editorial composition'];
+  const filename = path.join(dir, 'reference.style.json'); await fs.writeFile(filename, JSON.stringify(profile));
+  const output = path.join(dir, 'new-presentation');
+  await execFile(process.execPath, [path.join(__dirname, '../scripts/init-deck.cjs'), output, `--style=${filename}`]);
+  const css = await fs.readFile(path.join(output, 'deck.css'), 'utf8');
+  assert.ok(css.includes('--paper:#F5EDD9')); assert.ok(css.includes('--teal:#007366'));
+  const html = await fs.readFile(path.join(output, 'index.html'), 'utf8');
+  assert.ok(html.includes('תנו לרעיון שלכם')); assert.ok(!html.includes('synthetic-reference'));
+});

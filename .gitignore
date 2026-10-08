@@ -5,6 +5,13 @@ node_modules/
 *.proof/
 *.report.json
 office-proof/
+*.pptx-work/
+*.redesign.json
+*.inventory.json
+*.preservation.json
+*.style-work/
+*.style.json
+*.pdf
 my-presentation/
 *.log
 coverage/

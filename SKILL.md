@@ -1,11 +1,27 @@
 ---
 name: html-to-pptx
-description: Create rich interactive HTML presentations with motion graphics, Hebrew RTL and presenter notes, then export browser-faithful or editable PowerPoint decks. Use for HTML slide decks, animated presentations, HTML-to-PPTX conversion and presentations requiring both browser and PowerPoint delivery.
+description: Create and redesign HTML or existing PowerPoint presentations with Hebrew RTL, motion graphics and locked content/speaker notes. Extract a requested design language from websites, books/PDFs, screenshots or reference decks, then apply it to a new or existing presentation and verify preservation.
 ---
 
 # מצגות אינטראקטיביות עם מושן ויצוא PowerPoint
 
 בנו מקור HTML אחד עם סיפור ברור, טיפוגרפיה, מושן גרפי, חשיפות מדורגות, ניווט ומצב מרצה. הפיקו ממנו PPTX באמצעות הפריסה שהדפדפן חישב, ולא באמצעות חילוץ טקסט ובניית עיצוב אחר.
+
+## תוכן קיים או שפה עיצובית מרפרנס
+
+כשמקבלים מצגת מוכנה מבחינת תוכן והערות, שנו עיצוב בלבד: אין לשכתב, לקצר, להוסיף, למחוק או לסדר מחדש את התוכן ללא בקשה לכך. למצגת PPTX קיימת קראו [redesign-existing.md](references/redesign-existing.md): inspect → תכנון עיצוב לפי אובייקטים קיימים → apply → בדיקת שימור → רינדור ובדיקה חזותית. הקובץ המקורי נשמר, וההערות, התמונות, התרשימים, הנתונים והקישורים נשארים בחבילה המקורית.
+
+אם מבוקשת שפה עיצובית מאתר, ספר/PDF, עמודים מצולמים או מצגת אחרת, קראו תחילה [reference-design-language.md](references/reference-design-language.md). אספו ראיות, התבוננו בדוגמאות והפיקו פרופיל עיצוב עם צבעים, טיפוגרפיה, היררכיה, מרווחים, קומפוזיציה, טיפול בתמונות ומושן מתאים. פרופיל שנוצר אוטומטית הוא טיוטת תצפיות; הסוכן חייב לקרוא את הראיות ולהשלים את השפה לפני `reviewed:true`. זו בדיקת המחבר ולא דרישה לאישור נוסף מן המשתמש. אין להעתיק תוכן, לוגו או נכסים מן הרפרנס כשנתבקשה רק השפה העיצובית.
+
+```bash
+node scripts/style-reference.cjs capture reference.pdf reference.style-work --pages=1,2,3
+node scripts/style-reference.cjs capture https://example.com reference.style-work
+node scripts/redesign-pptx.cjs inspect source.pptx source.pptx-work --layout=auto
+node scripts/redesign-pptx.cjs apply source.pptx source.pptx-work/design.redesign.json redesigned.pptx
+node scripts/redesign-pptx.cjs verify source.pptx redesigned.pptx
+```
+
+ל־HTML קיים, שמרו עותק לפני שינוי והריצו `node scripts/content-lock.cjs verify before.html after.html`. בדיקה זו משווה טקסט לפי סדר השקופיות, הערות, יעדי קישורים והפניות למדיה; בדיקת PPTX משווה גם את כל חלקי החבילה המוגנים בבייטים. הצלחת בדיקת התוכן אינה מבטיחה קריאות, ניגודיות או היעדר חפיפות — בדקו גם את הפלט החזותי.
 
 ## הרכבת היכולות
 

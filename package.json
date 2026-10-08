@@ -1,19 +1,23 @@
 {
   "name": "html-to-pptx",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "description": "Interactive HTML presentations with motion graphics and browser-measured RTL PowerPoint export",
   "main": "scripts/html-to-pptx.js",
   "scripts": {
     "convert": "node scripts/html-to-pptx.js",
-    "test": "node --test --test-concurrency=1 tests/conversion.test.cjs",
+    "test": "node --test --test-concurrency=1 tests/conversion.test.cjs tests/redesign.test.cjs",
+    "redesign": "node scripts/redesign-pptx.cjs",
     "init-deck": "node scripts/init-deck.cjs"
   },
   "dependencies": {
+    "@xmldom/xmldom": "0.9.12",
+    "@napi-rs/canvas": "1.0.10",
+    "pdfjs-dist": "6.4.299",
     "pptxgenjs": "4.0.1",
     "jszip": "3.10.1",
     "puppeteer": "25.12.0"
   },
-  "engines": { "node": ">=22.12.0" },
+  "engines": { "node": ">=22.13.0" },
   "keywords": [
     "html",
     "pptx",
