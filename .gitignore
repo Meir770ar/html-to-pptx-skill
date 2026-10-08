@@ -1,0 +1,23 @@
+# Dependencies and local output
+node_modules/
+*.pptx
+*.zip
+*.proof/
+*.report.json
+office-proof/
+my-presentation/
+*.log
+coverage/
+
+# Credentials and machine-local settings
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+secrets*.json
+.npmrc
+.DS_Store
+Thumbs.db

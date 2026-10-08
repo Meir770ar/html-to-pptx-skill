@@ -1,0 +1,27 @@
+{
+  "name": "html-to-pptx",
+  "version": "2.0.0",
+  "description": "Interactive HTML presentations with motion graphics and browser-measured RTL PowerPoint export",
+  "main": "scripts/html-to-pptx.js",
+  "scripts": {
+    "convert": "node scripts/html-to-pptx.js",
+    "test": "node --test --test-concurrency=1 tests/conversion.test.cjs",
+    "init-deck": "node scripts/init-deck.cjs"
+  },
+  "dependencies": {
+    "pptxgenjs": "4.0.1",
+    "jszip": "3.10.1",
+    "puppeteer": "25.12.0"
+  },
+  "engines": { "node": ">=22.12.0" },
+  "keywords": [
+    "html",
+    "pptx",
+    "powerpoint",
+    "hebrew",
+    "rtl",
+    "converter"
+  ],
+  "author": "AVIZ",
+  "license": "MIT"
+}
